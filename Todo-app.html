@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List Application</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ensure the application looks good on all devices */
+        @media (max-width: 640px) {
+            .task-container {
+                padding: 1rem;
+            }
+            .task-title {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 min-h-screen flex items-center justify-center text-gray-300">
+    <div class="task-container w-full max-w-xl mx-auto bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg shadow-2xl p-6">
+        <h1 class="task-title text-3xl font-extrabold text-center text-gray-100 mb-6">🌟 To-Do List</h1>
+        <form id="taskForm" class="flex flex-col gap-4 md:flex-row mb-6">
+            <input type="text" id="taskInput" class="flex-grow px-4 py-2 border border-gray-600 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Enter a new task" required>
+            <input type="date" id="taskDueDate" class="px-4 py-2 border border-gray-600 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="px-6 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all">Add</button>
+        </form>
+        <h2 class="text-2xl font-bold text-gray-200 mb-4">📋 Incomplete Tasks</h2>
+        <ul id="taskList" class="divide-y divide-gray-600 mb-6">
+            <!-- Task items will be dynamically added here -->
+        </ul>
+        <h2 class="text-2xl font-bold text-gray-200 mb-4">✅ Completed Tasks</h2>
+        <ul id="completedTaskList" class="divide-y divide-gray-600">
+            <!-- Completed tasks will be dynamically added here -->
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('taskForm');
+            const taskInput = document.getElementById('taskInput');
+            const taskDueDate = document.getElementById('taskDueDate');
+            const taskList = document.getElementById('taskList');
+            const completedTaskList = document.getElementById('completedTaskList');
+
+            // Load tasks from localStorage
+            const loadTasks = () => {
+                const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                taskList.innerHTML = '';
+                completedTaskList.innerHTML = '';
+                tasks.forEach(task => {
+                    if (task.completed) {
+                        renderCompletedTask(task);
+                    } else {
+                        renderTask(task);
+                    }
+                });
+            };
+
+            // Save tasks to localStorage
+            const saveTasks = (tasks) => {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            };
+
+            // Calculate remaining days and determine color class
+            const calculateRemainingDays = (dueDate) => {
+                const today = new Date();
+                const due = new Date(dueDate);
+                const diffTime = due - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                let colorClass = "text-green-400";
+
+                if (diffDays <= 0) {
+                    colorClass = "text-red-400";
+                } else if (diffDays <= 3) {
+                    colorClass = "text-orange-600";
+                } else if (diffDays <= 7) {
+                    colorClass = "text-orange-400";
+                }
+
+                return { text: diffDays > 0 ? `${diffDays} days left` : 'Due today or overdue', colorClass };
+            };
+
+            // Render a single task
+            const renderTask = (task) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between py-3';
+                
+                const taskText = document.createElement('div');
+                taskText.className = 'flex flex-col';
+
+                const taskTitle = document.createElement('span');
+                taskTitle.textContent = task.text;
+                const taskDue = document.createElement('span');
+                const dueInfo = calculateRemainingDays(task.dueDate);
+                taskDue.className = `text-sm ${dueInfo.colorClass}`;
+                taskDue.textContent = task.dueDate ? dueInfo.text : 'No due date';
+
+                taskText.append(taskTitle, taskDue);
+
+                const controls = document.createElement('div');
+                controls.className = 'flex gap-2';
+
+                const completeBtn = document.createElement('button');
+                completeBtn.textContent = 'Complete';
+                completeBtn.className = 'px-3 py-1 text-xs bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow hover:from-green-600 hover:to-green-700 transition-all';
+                completeBtn.addEventListener('click', () => toggleTaskCompletion(task.text));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'px-3 py-1 text-xs bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all';
+                deleteBtn.addEventListener('click', () => deleteTask(task.text));
+
+                controls.append(completeBtn, deleteBtn);
+                li.append(taskText, controls);
+                taskList.appendChild(li);
+            };
+
+            // Render a completed task
+            const renderCompletedTask = (task) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between py-3';
+
+                const taskText = document.createElement('div');
+                taskText.className = 'flex flex-col';
+
+                const taskTitle = document.createElement('span');
+                taskTitle.textContent = task.text;
+                taskTitle.classList.add('line-through', 'text-gray-500');
+
+                const taskDue = document.createElement('span');
+                taskDue.textContent = task.dueDate ? `Completed on ${new Date().toLocaleDateString()}` : 'No due date';
+                taskDue.className = 'text-sm text-gray-400';
+
+                taskText.append(taskTitle, taskDue);
+
+                const controls = document.createElement('div');
+                controls.className = 'flex gap-2';
+
+                const undoBtn = document.createElement('button');
+                undoBtn.textContent = 'Undo';
+                undoBtn.className = 'px-3 py-1 text-xs bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow hover:from-blue-600 hover:to-blue-700 transition-all';
+                undoBtn.addEventListener('click', () => toggleTaskCompletion(task.text));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'px-3 py-1 text-xs bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg shadow hover:from-red-600 hover:to-red-700 transition-all';
+                deleteBtn.addEventListener('click', () => deleteTask(task.text));
+
+                controls.append(undoBtn, deleteBtn);
+                li.append(taskText, controls);
+                completedTaskList.appendChild(li);
+            };
+
+            // Add a new task
+            const addTask = (text, dueDate) => {
+                const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                const newTask = { text, dueDate, completed: false };
+                tasks.push(newTask);
+                saveTasks(tasks);
+                renderTask(newTask);
+            };
+
+            // Toggle task completion
+            const toggleTaskCompletion = (text) => {
+                const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                const task = tasks.find(t => t.text === text);
+                if (task) {
+                    task.completed = !task.completed;
+                    saveTasks(tasks);
+                    loadTasks();
+                }
+            };
+
+            // Delete a task
+            const deleteTask = (text) => {
+                let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                tasks = tasks.filter(task => task.text !== text);
+                saveTasks(tasks);
+                loadTasks();
+            };
+
+            // Handle form submission
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskText = taskInput.value.trim();
+                const taskDue = taskDueDate.value;
+                if (taskText) {
+                    addTask(taskText, taskDue);
+                    taskInput.value = '';
+                    taskDueDate.value = '';
+                }
+            });
+
+            // Load tasks on page load
+            loadTasks();
+        });
+    </script>
+</body>
+</html>
